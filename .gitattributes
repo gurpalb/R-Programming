@@ -1,2 +1,2 @@
 $ cat .gitattributes
-*.rb linguist-language=R
+*.csv linguist-language=R
