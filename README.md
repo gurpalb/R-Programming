@@ -16,3 +16,5 @@ Data Tidying
 Data Wrangling
 
 R Markdown for Data Visualization
+
+vim: syntax=R
