@@ -1,0 +1,288 @@
+---
+title: "Patient Data Report for Vancouver Coastal Health"
+output: word_document
+authors: Gurpal Bisra and Leon Zhu
+---
+
+<style type = "text/css">
+.table {width: 40%;}
+</style>
+
+**Prepared By: Gurpal Bisra and Leon Zhu**
+
+**Date: September 25, 2016**
+
+------  
+
+## Executive Summary
+
+As per the request of the Vancouver Coastal Health, we have generated this report by using the recieved confidental patient data. We identified the mean features of the data and their combinations such that one can deduce information to make decisions, to meet the healthcare needs of the population, within Vancouver Coastal Health.
+
+We received two data files, named "admissions.csv" and "ptdata.csv." For each file, we read in the files into R, cleaned and formatted the data. We then merged the two data frames into a new one. Next, we performed exploratory data analysis.
+
+**Based on our exploratory data analysis of the original data, we concluded there are: **  
+
+* more reported admissions on weekdays than weekends.  
+* a similiar number of emergency visits across days of the week.  
+* similar length of stays at hospitals for males and females.  
+* more female than male admissions each month on average.  
+* similar average lengths of stay across all months.  
+* what appears to be a normal disritubion of the frequency of hospital admissions of age groups.  
+* similar average length of stays in hopsital in days for all age groups.
+* a higher proporation of emergency admissions for older age groups.  
+
+------    
+
+## Tidying Data
+We received two data files, named "admissions.csv" and "ptdata.csv." For each file, we read in the files into R, cleaned and formatted the data. For "admissions.csv," we added the column weekdayname and a column weekdayname with factor levels of days of the week, and changed the "emerg" column's data type from int to factor and "amdate" column's data type from factor to POSITlt type. For "ptdata.csv," we created a new column named "age" with numeric data types, removed "hr" from the data values, changed the "age" column's data type from char to numeric, removed values containing -1 and created a new column named "agegroup." This columnn contains counts of anyone who falls into sets of 5 years ranging from *0* up to *90+*. Finally, we changed the "agegroup" data type from numeric to factor.
+
+After the two data frames were edited, we merge the two data frames into a new one. The final data frame contained the fields we deemed most important to include in this report. **The columns are denoted with their data-types as follows:**  
+
+1. id as integer    
+2. sex as factor    
+3. age as numeric with range 1 to 99    
+4. agegroup as factor (5 year age bins, from 0 to 90)    
+5. emerg as factor    
+6. admdate as date  
+7. weekdayname as factor    
+8. los as numeric    
+
+Detailed data dictionaries of the original data are found at the end of this report.
+
+```{r, echo=FALSE, eval = TRUE, warnings = FALSE, errors= FALSE, messages = FALSE}
+# setwd("C:/Users/gbisra.stu/Desktop/BAMS580D-W2")
+# setwd("C:/Users/zhengzhu/Desktop/Grad/BAMS 580D/Assignment 3 (with Gurpal)")
+
+## Part 1: Read in "admissions.csv", clean and format the data, and add the column weekdayname, as we did in class.
+
+# Read in "admissions.csv"
+adm <- read.csv("admissions.csv", header=TRUE, na.strings="")
+
+# Change "emerg" column's data type from int to factor
+adm$emerg <- factor(adm$emerg)
+
+# Change "amdate" column's data type from factor to POSITlt type
+adm$admdate2 <- strptime(adm$admdate, format = "%Y-%m-%d")
+    # Change "amdate" column's data type from factor to Date type 
+adm$admdate3 <- as.Date(adm$admdate)
+
+# Add column weekdayname with factor levels of days of the week
+adm$weekdayname <- format(adm$admdate2, "%A")
+adm$weekdayname <- factor(adm$weekdayname, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"), c("M","T","W","Th","F","Sa","Su"))
+
+#------------------------------------------------------------------
+## Part 2: Read in "ptdata.csv", clean and format the data, and add the column agegroup, as we did in class.
+
+# Read in "ptdata.csv"
+ptdata <- read.csv("ptdata.csv", header=TRUE)
+
+# Create a new column named "age" with numeric data types
+    # remove the "yr" from data values
+ptdata$age <- gsub("yr", "", ptdata$age2) 
+    # Change "age" column's data type from char to numeric
+ptdata$age <- as.numeric(ptdata$age)
+    # Remove values containing -1
+ptdata$age[which(ptdata$age<0)] <- NA
+
+# Add the column "agegroup" containing sets of 5 years of ages
+ptdata$agegroup <- 5*floor(ptdata$age/5)
+    # Make the top factor level be for ages 90+
+ptdata$agegroup[which(ptdata$agegroup == 95)] <- 90
+    # Change the "agegroup" data type from numeric to factor
+ptdata$agegroup <- factor(ptdata$agegroup)
+
+#------------------------------------------------------------------
+## Part 3: Merge the two data frames into a new one. 
+admp <- merge(ptdata[c(1,2,4,5)], adm[c(1,2,7,8,5)], all.y=TRUE)
+# admp <- merge(ptdata, adm, all.y=TRUE)
+```
+
+Table 1 below details the data dictionary of the tidy merged data frame, denoted as "admp," which was used for exploratory data analysis. 
+
+### TABLE 1: DATA DICTIONARY FOR MERGED DATA (admp) DATA FRAME  
+
+Column Name  |  Format   |  Length  |  Data Elements [Range]                    |  Description                      |   
+-----------  |  -------  |  ------  |  ---------------------                    |  ------------------------------   |      
+id           |  int      |  40,000  |  [3, 30,000], missing values              |  Patient identification number    |  
+sex          |  Factor   |  40,000  |  M is male, F is female, NA is "unknown"  |  Chromosomal male or female       |     
+age          |  num      |  40,000  |  [1, 99]                                  |  Age in years                     |      
+agegroup     |  Factor   |  40,000  |  [0, 90] by 5-year intervals              |  Age group of 5-year intervals    |  
+emerg        |  Factor   |  40,000  |  0 for "no", or 1 for "yes"               |  Emergency room patient or not    |      
+admdate3     |  Date     |  40,000  |  [2014-01-01, 2014-12-30]                 |  Patient admission date           |  
+weekdayname  |  Factor   |  40,000  |  M, T, W, Th, F, Sa, Su                   |  Days of the week                 |
+los          |  num      |  40,000  |  [0.1828703, 267.37636]                   |  Length of hospital stay in days  |  
+
+------  
+
+# Exploratory Data Analysis 
+
+After tidying the data we recieved, we performed exploratory data analysis and determined interesting trends.
+
+```{r, echo=FALSE, eval=TRUE, include=FALSE}
+library("ggplot2")          # Plotting Package
+library("RColorBrewer")     # Colour Scheme Package
+library("reshape2")         # Dataframe Reshaping Package
+library("knitr")            # RMarkdown Forming Package
+```
+
+First, we plotted the frequency of admissions by the days of the week. We observed a higher number of reported admissions during the weekdays when compared to the weekends.
+
+```{r, echo=FALSE, eval=TRUE, error = FALSE, message = FALSE, warning = FALSE}
+p0 <- ggplot(data=adm, aes(x=weekdayname, fill="#DD8888"))+geom_bar(width = 0.75)
+
+# Add titles to bar plot, and remove background grey grids
+p0 +theme(text=element_text(size=13), panel.background = element_blank())+
+    labs(title = "Weekday Admissions are Highest", x = "Abbreviated Days of the Week", y = "Frequency of Hospital Admissions")+
+    scale_y_continuous(limits=c(0, 8000))+
+    guides(fill=FALSE)      # remove legend
+```
+  
+------  
+
+Next, we plotted the frequency of emergency and non-emergency visits as a function of the days of the week. Interestingly, we observed little variation in the number of emergency visits across every day of the week. 
+
+```{r, echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+p1 <- ggplot(data=adm, aes(x=weekdayname,fill=emerg))+
+    geom_bar(position="dodge", width = 0.8) 
+
+# Add titles to bar plot, set theme colours, and remove background grey grids
+p1  +labs(x = "weekday", y = "Admissions", fill="Emergency")+
+    scale_fill_brewer(palette="Set2")+
+    theme(text= element_text(size=13), panel.background = element_blank())+
+    labs(title = "Similiar Number of Emergency Visits on Days of the Week", x = "Abbreviated Days of the Week", y = "Frequency of Hospital Admissions")+
+    scale_fill_discrete(labels=c("No", "Yes"))+
+    scale_y_continuous(limits=c(0, 6000))
+```
+  
+------ 
+
+Afterwards, we plotted the density of genders, both male and female, as a function of their length of hospital stay. We visually observed both distributions to be right-skewed and similiar.
+
+```{r, echo=FALSE, eval=TRUE,warning=FALSE, message=FALSE}
+# Even though sex is character, ggplot interpret as factor
+# Get rid of NA values
+ggplot(data=admp[!is.na(admp$sex),], aes(x = los, colour = sex))+
+    scale_x_continuous(limits=c(0,75))+
+    geom_density()+
+    theme(text=element_text(size=13), panel.background = element_blank())+
+    labs(title = "Males and Females have Similar Lengths of Stay", x = "Length of Stay (days)", y = "Probability Density") 
+    # is.na gives logical vector 1, 0
+```
+  
+------  
+
+In addition, we plotted the frequency of hospital admissions for each month. We noted that, on average, there are more female than male admissions each month. The exceptions occured in February and June.
+
+``` {r, echo=FALSE, eval=TRUE}
+#Add a column that indicates the month of each admission
+admp$months <- format(admp$admdate,"%b")
+admp$months <- factor(admp$months,levels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
+
+# Plot frequency of hospital admissisons for each month by gender
+ggplot(data=admp, aes(x=months,fill=sex))+
+    geom_bar(position="dodge")+
+    theme(text=element_text(size=13), panel.background = element_blank())+
+    scale_fill_brewer(palette="Set2")+
+    labs(title = "Monthly Admission Rate Relatively Constant", x = "Abbreviated Months of a Year", y = "Frequency of Hospital Admissions") 
+```
+  
+------  
+
+Furthermore, we plotted the average length of hospital stay in days against each month in 2014. We observed similar average lengths of stay across all months. 
+
+``` {r, echo=FALSE, eval=TRUE}
+#find the mean value of the LOS in each months with function 'aggregate'
+D1=aggregate(admp[, 8], list(admp$months), mean)
+
+# Plot average length of stay in hospital in days against months 
+barplot(D1$x,names.arg = D1$Group.1, col="aquamarine3", main = "Similar Length of Hospital Stay Each Month", xlab = ("Months"), ylab=("Average Length of Stay (days)"),space = 0.8)
+```
+  
+------  
+
+Next, we explored combinations which included various age groups. First, we plotted a histogram of the admission rates against their respective age groups. Interestingly, we observed a normal distribution.
+
+``` {r, echo=FALSE, eval=TRUE}
+ggplot(data=admp[!is.na(admp$agegroup), ], aes(x=agegroup))+
+    geom_bar(fill="palevioletred", colour="palevioletred", width = 0.7)+
+    theme(text=element_text(size=13), panel.background = element_blank())+
+    labs(title = "Admissions in Age Groups Appear Normally Distributed", x = "Age Groups (years)", y = "Frequency of Hospital Admissions")
+```
+  
+------  
+
+Similarily, we then plotted a histogram of the average length of stay for all age groups. We observed a similar average length of stay, in days, for all age groups.
+
+``` {r, echo=FALSE, eval=TRUE}
+# Use function 'aggregate' to get the mean of LOS in different age groups
+D2=aggregate(admp[,8], list(admp$agegroup), mean)
+
+# Plot 
+barplot(D2$x,names.arg = D2$Group.1, main = "Similar Average Length of Stay in Hospital of All Age Groups", col="burlywood3", xlab = ("Age Groups (years)"), ylab=("Average Length of Stay (days)"), ylim=c(0, 14), xlim=c(0,21))
+```
+  
+------  
+
+We became interesting in determining whether the above trend was affected by emergency admissions. Therefore, we plotted a histogram of the number of emergency admissions against their respective age groups. We observed a slight left skew of emergency cases admitted over different age groups. This indicates a larger likelihood of being admitted as emergency case for older age groups.
+
+``` {r, echo=FALSE, eval=TRUE}
+emerg2 = as.numeric(admp$emerg)
+emerg2[which(emerg2==1)] <- 0
+emerg2[which(emerg2==2)] <- 1
+D3=aggregate(emerg2, list(admp$agegroup), FUN = sum)
+
+# Plot the number of emergency cases agasinst age groups
+barplot(D3$x,names.arg = D3$Group.1, main = "Older Age Groups Have Higher Proportion of Emergency Admissions", col="#82CAFA", xlab = ("Age Groups"), ylab = ("Number of Emergency Cases"), ylim=c(0, 1600), space = 0.8)
+```
+  
+------  
+
+Finally, we tabulated a table of the frequency of male and female patients corresponding to each age group. For instance, each age group is different by 5-years and the last group accounts for those who are over 90-years-old.
+
+```{r, echo=FALSE, eval=TRUE}
+# make a table of patient age and sex
+agetable <- as.data.frame(table(admp$agegroup, admp$sex))
+    # table has frequency function built-in it, it's the output
+# going from wide to long (casting)
+agetable2 <- dcast(agetable, Var1~Var2, value.var = "Freq")   
+    # frequency counts values of males and female
+names(agetable2) <- c("agegroup", "Female", "Male")
+kable(agetable2)
+```
+  
+------  
+
+# Conclusions 
+
+**Based on our exploratory data analysis of the original data, we concluded there are: **  
+
+* more reported admissions on weekdays than weekends.  
+* a similiar number of emergency visits across days of the week.  
+* similar length of stays at hospitals for males and females.  
+* more female than male admissions each month on average.  
+* similar average lengths of stay across all months.  
+* what appears to be a normal disritubion of the frequency of hospital admissions of age groups.  
+* similar average length of stays in hopsital in days for all age groups.
+* a higher proporation of emergency admissions for older age groups.
+  
+------  
+
+# Data Dictionary
+    
+### TABLE 2: DATA DICTIONARY FOR ADMISSIONS (adm) DATA FRAME    
+
+Column Name  |  Format   |  Length  |  Data Elements [Range]        |  Description                      |   
+-----------  |  -------  |  ------  |  ---------------------        |  ------------------------------   |      
+id           |  int      |  40,000  |  [3, 30,000], missing values  |  Patient identification number    |  
+emerg        |  Factor   |  40,000  |  0 for "no", or 1 for "yes"   |  Emergency room patient           |     
+sched        |  Factor   |  40,000  |  Scheduled, Unscheduled, NA   |  Scheduled patient or not         |           
+admdate      |  Factor   |  40,000  |  [2014-01-01, 2014-12-30]     |  Patient admission date           |  
+los          |  num      |  40,000  |  [0.1828703, 267.37636]       |  Length of hospital stay in days  |             
+
+### TABLE 3: DATA DICTIONARY FOR PATIENT DATA (ptdata) DATA FRAME  
+
+Column Name  |  Format   |  Length  |  Data Elements [Range]                    |  Description                     |     
+-----------  |  -------  |  ------  |  ---------------------                    |  ------------------------------  |    
+id           |  int      |  30,000  |  [1, 30,000]                              |  Patient identification number   |    
+sex          |  Factor   |  30,000  |  M is male, F is female, NA is "unknown"  |  Chromosomal male or female      |       
+age2         |  Factor   |  30,000  |  [-1yr, 99yr]                             |  Age in years                    |             
