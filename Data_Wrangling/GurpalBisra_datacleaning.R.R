@@ -1,6 +1,4 @@
 ###################################################################
-# BAMS 580D - Assignment 01 - Data wrangling in R
-# Instructor: Dr. Rachel Lewis
 # Gurpal Bisra
 # Student #: 69295061
 # Due date: Sept 18, 2016 at 11:59 p.m.
